@@ -107,9 +107,54 @@ class DataGenerator {
  *   DATA STRUCTURES FOR ANALYSIS
  * ******************************************************************************************** */
 
+struct treap_node {
+    element* elem;
+    treap_node* left;
+    treap_node* right;
+
+    treap_node(element* e, treap_node* l, treap_node* r) : elem(e), left(l), right(r) {}
+    treap_node(element* e) : elem(e), left(NULL), right(NULL) {}
+};
+
 class RandomisedTreap {
    private:
+    treap_node* head;
+
+    treap_node* insert_node(treap_node* head, treap_node* n) {
+        if (head == NULL) {
+            return n;
+        }
+        // find the tree position
+        if (get<I_ELEMKEY>(*n->elem) <= get<I_ELEMKEY>(*head->elem)) {
+            if (head->left == NULL) {  // insert here
+                head->left = n;
+            } else {  // recurse left
+                insert_node(head->left, n);
+            }
+        } else {
+            if (head->right == NULL) {  // insert here
+                head->right = n;
+            } else {  // recurse left
+                insert_node(head->right, n);
+            }
+        }
+
+        // if we inserted, fix the heap condition with rotations
+
+        // return the head
+        return head;
+    }
+
+    void rotate_left() {}
+    void rotate_right() {}
+    void rotate_leftright() {}
+    void rotate_rightleft() {}
+
    public:
+    void insert(element* e) {
+        treap_node n(e);
+        head = insert_node(head, &n);
+    }
 };
 
 class DynamicArray {
