@@ -208,8 +208,20 @@ class RandomisedTreap {
         print(head->right, depth + 1);
     }
 
+    void delete_head(treap_node* head) {
+        if (head == NULL) return;
+        if (head->left != NULL) {
+            delete_head(head->left);
+        }
+        if (head->right != NULL) {
+            delete_head(head->right);
+        }
+        delete (head);
+    }
+
    public:
     RandomisedTreap() : head(NULL) {}
+    ~RandomisedTreap() { delete_head(head); }
 
     void insert(element e) {
         cout << "Insert: " << get<I_ELEMID>(e) << ", " << get<I_ELEMKEY>(e) << '\n';
@@ -328,8 +340,6 @@ int main(int argc, char** argv) {
 
     // std::cout << "finished computation at " << std::ctime(&end_time)
     //           << "elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
-
-    //
 
     cout << "Initialise DataGenerator\n";
 
