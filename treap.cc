@@ -109,22 +109,20 @@ class DataGenerator {
 };
 
 /* ******************************************************************************************** *
- *   DATA STRUCTURES FOR ANALYSIS
+ *   DATA STRUCTURES FOR ANALYSIS: RANDOMISED TREAP
  * ******************************************************************************************** */
 
 struct treap_node {
-    element* elem;
+    element elem;
     int priority;
     treap_node* left;
     treap_node* right;
 
-    treap_node(element* e, int p, treap_node* l, treap_node* r)
-        : elem(e), priority(p), left(l), right(r) {}
-    treap_node(element* e, int p) : elem(e), priority(p), left(NULL), right(NULL) {}
+    treap_node(element e, int p) : elem(e), priority(p), left(NULL), right(NULL) {}
 
-    int get_key() { return get<I_ELEMKEY>(*elem); }
+    int get_key() { return get<I_ELEMKEY>(elem); }
 
-    // int get_id() { return get<I_ELEMID>(*elem); } DELETE: currently unused in treap
+    int get_id() { return get<I_ELEMID>(elem); }
 };
 
 class RandomisedTreap {
@@ -140,13 +138,13 @@ class RandomisedTreap {
             if (head->left == NULL) {  // insert here
                 head->left = n;
             } else {  // recurse left
-                insert_node(head->left, n);
+                head->left = insert_node(head->left, n);
             }
         } else {
             if (head->right == NULL) {  // insert here
                 head->right = n;
             } else {  // recurse left
-                insert_node(head->right, n);
+                head->right = insert_node(head->right, n);
             }
         }
 
@@ -197,10 +195,26 @@ class RandomisedTreap {
     // treap_node* rotate_leftright() {} // DELETE:
     // treap_node* rotate_rightleft() {} // DELETE:
 
+    void print(treap_node* head, int depth) {
+        for (int i = 0; i < depth; i++) {
+            cout << "_";
+        }
+        if (head == NULL) {
+            cout << "*EMPTY*\n";
+            return;
+        }
+        cout << '(' << head->get_id() << ", " << head->get_key() << ", " << head->priority << ")\n";
+        print(head->left, depth + 1);
+        print(head->right, depth + 1);
+    }
+
    public:
-    void insert(element* e) {
-        treap_node n(e, rng.rand_priority());
-        head = insert_node(head, &n);
+    RandomisedTreap() : head(NULL) {}
+
+    void insert(element e) {
+        cout << "Insert: " << get<I_ELEMID>(e) << ", " << get<I_ELEMKEY>(e) << '\n';
+        treap_node* n = new treap_node(e, rng.rand_priority());
+        head = insert_node(head, n);
     }
 
     // TODO: Deletion
@@ -219,9 +233,15 @@ class RandomisedTreap {
         if (node == NULL) {
             return NULL;
         }
-        return node->elem;
+        return &node->elem;
     }
+
+    void print() { print(head, 0); }
 };
+
+/* ******************************************************************************************** *
+ *   DATA STRUCTURES FOR ANALYSIS: DYNAMIC ARRAY
+ * ******************************************************************************************** */
 
 class DynamicArray {
    private:
@@ -250,6 +270,7 @@ class DynamicArray {
 
    public:
     DynamicArray() { list = (element*)malloc(1 * sizeof(element)); }
+    ~DynamicArray() { free(list); }
 
     void insert(element x) {
         if (count + 1 == capacity) {
@@ -275,6 +296,7 @@ class DynamicArray {
             shrink();
         }
     }
+
     int search(int key) {
         for (int i = 0; i < count; i++) {
             if (get<I_ELEMKEY>(list[i]) == key) {
@@ -282,6 +304,12 @@ class DynamicArray {
             }
         }
         return NOT_FOUND;
+    }
+
+    void print() {
+        for (int i = 0; i < count; i++) {
+            cout << '(' << get<I_ELEMID>(list[i]) << ", " << get<I_ELEMKEY>(list[i]) << ")\n";
+        }
     }
 };
 
@@ -303,13 +331,6 @@ int main(int argc, char** argv) {
 
     //
 
-    // DELETE:
-    // uniform_int_distribution<> id_dist(1, 9);
-    // uniform_int_distribution<> key_dist(0, KEY_MAX);
-
-    // cout << id_dist(engine) << '\n';
-    // cout << key_dist(engine);
-
     cout << "Initialise DataGenerator\n";
 
     DataGenerator dg;
@@ -324,5 +345,34 @@ int main(int argc, char** argv) {
     cout << "Initialise search\n";
     search_op e3 = dg.gen_search();
 
+    cout << "Initialise DynamicArray\n";
+    DynamicArray da;
+
+    cout << "Initialise RandomisedTreap\n";
+    RandomisedTreap rt;
+
+    cout << "Create 1000 insertions\n";
+    insertion_op insert1k[1000] = {};
+    for (int i = 0; i < 1000; i++) {
+        insert1k[i] = dg.gen_insertion();
+    }
+
+    cout << "1000 insertions into DynamicArray\n";
+    for (int i = 0; i < 1000; i++) {
+        da.insert(get<I_OPELEM>(insert1k[i]));
+    }
+
+    cout << "10 insertions into RandomisedTreap\n";
+    for (int i = 0; i < 10; i++) {
+        rt.insert(get<I_OPELEM>(insert1k[i]));
+    }
+
+    cout << "print DynamicArray\n";
+    da.print();
+
+    cout << "print RandomisedTreap\n";
+    rt.print();
+
+    cout << "FINISHED\n";
     return 0;
 }
