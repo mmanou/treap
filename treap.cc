@@ -6,12 +6,14 @@
  * ******************************************************************************************** */
 
 #include <chrono>
+#include <climits>
 #include <ctime>
 #include <iostream>
 #include <random>
 #include <tuple>
 
 #define KEY_MAX 10000000
+#define PRIORITY_MAX INT_MAX
 #define NOT_FOUND -1
 
 // Operation Indexes
@@ -46,9 +48,10 @@ class RandIntGenerator {
     mt19937 engine{rd()};
     uniform_int_distribution<> id_dist;
     uniform_int_distribution<> key_dist;
+    uniform_int_distribution<> prio_dist;
 
    public:
-    RandIntGenerator() : id_dist(1, 9), key_dist(0, KEY_MAX) {}
+    RandIntGenerator() : id_dist(1, 9), key_dist(0, KEY_MAX), prio_dist(0, PRIORITY_MAX) {}
 
     int rand_id() { return id_dist(engine); }
 
@@ -58,6 +61,8 @@ class RandIntGenerator {
     }
 
     int rand_key() { return key_dist(engine); }
+
+    int rand_priority() { return prio_dist(engine); }
 };
 RandIntGenerator rng;  // Global Random Int Generator for id, key
 
@@ -109,11 +114,17 @@ class DataGenerator {
 
 struct treap_node {
     element* elem;
+    int priority;
     treap_node* left;
     treap_node* right;
 
-    treap_node(element* e, treap_node* l, treap_node* r) : elem(e), left(l), right(r) {}
-    treap_node(element* e) : elem(e), left(NULL), right(NULL) {}
+    treap_node(element* e, int p, treap_node* l, treap_node* r)
+        : elem(e), priority(p), left(l), right(r) {}
+    treap_node(element* e, int p) : elem(e), priority(p), left(NULL), right(NULL) {}
+
+    int get_key() { return get<I_ELEMKEY>(*elem); }
+
+    // int get_id() { return get<I_ELEMID>(*elem); } DELETE: currently unused in treap
 };
 
 class RandomisedTreap {
@@ -124,8 +135,8 @@ class RandomisedTreap {
         if (head == NULL) {
             return n;
         }
-        // find the tree position
-        if (get<I_ELEMKEY>(*n->elem) <= get<I_ELEMKEY>(*head->elem)) {
+        // perform bst insert
+        if (n->get_key() <= head->get_key()) {
             if (head->left == NULL) {  // insert here
                 head->left = n;
             } else {  // recurse left
@@ -139,21 +150,76 @@ class RandomisedTreap {
             }
         }
 
-        // if we inserted, fix the heap condition with rotations
+        // if we inserted: fix the heap condition with rotations, then return the new head
+        if (head->left != NULL && head->left->priority < head->priority) {
+            return rotate_right(head);
+        } else if (head->right != NULL && head->right->priority < head->priority) {
+            return rotate_left(head);
+        }
 
-        // return the head
+        // no rotations: return the original head
         return head;
     }
 
-    void rotate_left() {}
-    void rotate_right() {}
-    void rotate_leftright() {}
-    void rotate_rightleft() {}
+    treap_node* search_node(treap_node* head, int key) {
+        if (head->get_key() == key) {
+            return head;
+        }
+        if (head->get_key() < key && head->left != NULL) {  // go right
+            return search_node(head->left, key);
+        }
+        if (key < head->get_key() && head->right != NULL) {  // go right
+            return search_node(head->right, key);
+        }
+        return NULL;
+    }
+
+    // TODO: Deletion
+    //  treap_node* delete_node(treap_node* node) {
+    //      if (node->left == NULL && node->right == NULL) {
+    //          return NULL;
+    //      }
+    //  }
+
+    treap_node* rotate_left(treap_node* head) {
+        treap_node* temp = head->right;
+        head->right = temp->left;
+        temp->left = head;
+        return temp;
+    }
+
+    treap_node* rotate_right(treap_node* head) {
+        treap_node* temp = head->left;
+        head->left = temp->right;
+        temp->right = head;
+        return temp;
+    }
+    // treap_node* rotate_leftright() {} // DELETE:
+    // treap_node* rotate_rightleft() {} // DELETE:
 
    public:
     void insert(element* e) {
-        treap_node n(e);
+        treap_node n(e, rng.rand_priority());
         head = insert_node(head, &n);
+    }
+
+    // TODO: Deletion
+    //  void delet(int key) {
+    //      head = delete_node(head, key);
+
+    //     treap_node* node = search_node(head, key);
+    //     if (node == NULL) {
+    //         return;
+    //     }
+    //     delete_node(node);
+    // }
+
+    element* search(int key) {
+        treap_node* node = search_node(head, key);
+        if (node == NULL) {
+            return NULL;
+        }
+        return node->elem;
     }
 };
 
