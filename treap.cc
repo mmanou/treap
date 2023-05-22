@@ -5,6 +5,7 @@
  *  Date: 18/05/2023
  * ******************************************************************************************** */
 
+#include <cassert>
 #include <chrono>
 #include <climits>
 #include <ctime>
@@ -12,7 +13,8 @@
 #include <random>
 #include <tuple>
 
-#define KEY_MAX 10000000
+// #define KEY_MAX 10000000
+#define KEY_MAX 100
 #define PRIORITY_MAX INT_MAX
 #define NOT_FOUND -1
 #define DELETED -1
@@ -175,15 +177,14 @@ class RandomisedTreap {
         if (head->get_key() == key) {
             return head;
         }
-        if (head->get_key() < key && head->left != NULL) {  // go right
+        if (key < head->get_key() && head->left != NULL) {  // go left
             return search_node(head->left, key);
         }
-        if (key < head->get_key() && head->right != NULL) {  // go right
+        if (head->get_key() < key && head->right != NULL) {  // go right
             return search_node(head->right, key);
         }
         return NULL;
     }
-
 
     treap_node* rotate_left(treap_node* head) {
         treap_node* temp = head->right;
@@ -200,7 +201,8 @@ class RandomisedTreap {
     }
 
     treap_node* find_parent(treap_node* head, int key) {
-        // NOTE: Assumes that head has already been checked, and is not the node
+        // NOTE: Assumes that head has already been checked, and is not the node.
+        // However, we cannot check again, because it might have a duplicate key.
         if (key < head->get_key()) {
             if (head->left == NULL) {
                 return NULL;
@@ -223,6 +225,10 @@ class RandomisedTreap {
     }
 
     bool is_leaf_node(treap_node* node) {
+        if (node == NULL) {
+            cout << "Unexpected check of node being a leaf";
+            return false;
+        }
         if (node->left == NULL && node->right == NULL) return true;
         return false;
     }
@@ -241,24 +247,30 @@ class RandomisedTreap {
         return false;
     }
 
-    // NOTE: Assumes that left and right both exist
     bool left_smaller_than_right(treap_node* node) {
-        if (node->left->priority <= node->right->priority) {  // TODO: Might need to tiebreak
+        // NOTE: Assumes that left and right both exist
+        assert(("ERROR: Expected left and right to both exist",
+                node->left != NULL && node->right != NULL));
+
+        if ((node->left->priority < node->right->priority) ||  // priority
+            (node->left->priority == node->right->priority &&  // tiebreak using key
+             node->left->get_key() < node->right->get_key())) {
             return true;
         }
         return false;
     }
 
     // Core helper function for deletion operation
-    void delete_node(treap_node* head, int key) {
-        treap_node* parent = find_parent(head, key);
-
-        // TODO: Check that we don't use head for the rest of this function. Only parent.
+    void delete_node(treap_node* parent, int key) {
         if (parent == NULL) {
             return;
         }
 
-        if (key < parent->get_key()) {         // Target node is left child
+        if (key < parent->get_key() ||
+            (key == parent->get_key() && parent->left != NULL &&
+             key == parent->left->get_key())) {  // Target node is left child
+            assert(("ERROR: Expected left child to exist", parent->left != NULL));
+
             if (is_leaf_node(parent->left)) {  // is leaf => delete
                 delete (parent->left);
                 parent->left = NULL;
@@ -274,7 +286,9 @@ class RandomisedTreap {
                 parent->left = rotate_left(parent->left);
             }
             delete_node(parent->left, key);
-        } else {                                // Target node is right child
+        } else {  // Target node is right child
+            assert(("ERROR: Expected right child to exist", parent->right != NULL));
+
             if (is_leaf_node(parent->right)) {  // is leaf => delete
                 delete (parent->right);
                 parent->right = NULL;
@@ -291,6 +305,25 @@ class RandomisedTreap {
             }
             delete_node(parent->right, key);
         }
+    }
+
+    // Core helper function for height
+    int get_height(treap_node* node, int depth) {
+        if (node == NULL) {
+            return depth;
+        }
+        return max(get_height(node->left, depth + 1), get_height(node->right, depth + 1));
+    }
+
+    // Core helper function for node depth
+    int get_all_node_depths(treap_node* node, int curr_id, int curr_depth, int* depth_array) {
+        if (node == NULL) {
+            return curr_id;
+        }
+        depth_array[curr_id] = curr_depth;
+        curr_id = get_all_node_depths(node->left, curr_id + 1, curr_depth + 1, depth_array);
+        curr_id = get_all_node_depths(node->right, curr_id + 1, curr_depth + 1, depth_array);
+        return curr_id;
     }
 
     void print(treap_node* head, int depth) {
@@ -347,8 +380,14 @@ class RandomisedTreap {
             } else {  // right smaller than left
                 head = rotate_left(head);
             }
+            delete_node(head, key);
+            return;
         }
-        delete_node(head, key);
+        treap_node* parent = find_parent(head, key);
+        if (parent == NULL) {
+            return;
+        }
+        delete_node(parent, key);
     }
 
     // Perform search operation
@@ -358,6 +397,19 @@ class RandomisedTreap {
             return NULL;
         }
         return &node->elem;
+    }
+
+    int get_height() { return get_height(head, 0); }
+
+    int* get_all_node_depths() {
+        if (head == NULL) {
+            return NULL;
+        }
+
+        int* depths = (int*)calloc(1024, sizeof(int));
+        get_all_node_depths(head, 0, 0, depths);
+
+        return depths;
     }
 
     void print() { print(head, 0); }
@@ -495,6 +547,18 @@ int main(int argc, char** argv) {
     cout << "print RandomisedTreap\n";
     rt.print();
 
+    cout << "5 searches in RandomisedTreap\n";
+    for (int i = 0; i < 5; i++) {
+        search_op s = dg.gen_search();
+        cout << "searching key=" << get<I_OPKEY>(s);
+        element* e = rt.search(get<I_OPKEY>(s));
+        if (e == NULL) {
+            cout << "=> not found\n";
+        } else {
+            cout << "=> found elem=(" << get<I_ELEMID>(*e) << ", " << get<I_ELEMKEY>(*e) << ")\n";
+        }
+    }
+
     cout << "5 deletions from RandomisedTreap\n";
     for (int i = 0; i < 5; i++) {
         deletion_op d = dg.gen_deletion();
@@ -504,6 +568,14 @@ int main(int argc, char** argv) {
 
     cout << "print RandomisedTreap\n";
     rt.print();
+
+    cout << "Treap height = " << rt.get_height() << "\n";
+    int* depths = rt.get_all_node_depths();
+    cout << "Avg node depth = [";
+    for (int i = 0; i < 1024; i++) {
+        cout << depths[i] << ",";
+    }
+    cout << "]\n";
 
     cout << "FINISHED\n";
     return 0;
