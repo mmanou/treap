@@ -35,6 +35,8 @@
 
 using namespace std;
 
+typedef chrono::system_clock csc;
+
 typedef tuple<int, int> element;  // {I_ELEMID: int, I_ELEMKEY: int}
 
 typedef tuple<int, element> insertion_op;  // {I_OPTYPE: OPTYPE_INSERTION, I_OPELEM: element},
@@ -494,19 +496,11 @@ class DynamicArray {
  * ******************************************************************************************** */
 
 int main(int argc, char** argv) {
-    // DELETE:
-    // auto start = std::chrono::system_clock::now();
-    // // Some computation here
-    // auto end = std::chrono::system_clock::now();
-
-    // std::chrono::duration<double> elapsed_seconds = end - start;
-    // std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-
-    // std::cout << "finished computation at " << std::ctime(&end_time)
-    //           << "elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
+    // Start timer
+    csc::time_point tp0 = csc::now();
+    time_t time0 = chrono::system_clock::to_time_t(tp0);
 
     cout << "Initialise DataGenerator\n";
-
     DataGenerator dg;
 
     cout << "Initialise element\n";
@@ -577,6 +571,10 @@ int main(int argc, char** argv) {
     }
     cout << "]\n";
 
-    cout << "FINISHED\n";
+    csc::time_point tp1 = csc::now();
+    time_t time1 = chrono::system_clock::to_time_t(tp1);
+
+    chrono::duration<double> elapsed_seconds = tp1 - tp0;
+    cout << "Finished at " << ctime(&time1) << "elapsed time: " << elapsed_seconds.count() << "s\n";
     return 0;
 }
