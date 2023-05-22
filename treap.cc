@@ -79,7 +79,7 @@ class DataGenerator {
    public:
     DataGenerator() {
         key_list = (int*)malloc(KEY_MAX * sizeof(int));  // TODO: Might need more than KEY_MAX
-        for (int i=0; i < KEY_MAX; i++) {
+        for (int i = 0; i < KEY_MAX; i++) {
             key_list[i] = DELETED;
         }
     }
@@ -88,7 +88,7 @@ class DataGenerator {
     element gen_element() {
         int key = rng.rand_key();
         element elem = {id_next, key};
-        key_list[id_next-1] = key;
+        key_list[id_next - 1] = key;
         id_next++;
         return elem;
     }
@@ -103,8 +103,8 @@ class DataGenerator {
     deletion_op gen_deletion() {
         int del_id = rng.rand_id(id_next - 1);
         deletion_op del;
-        if (key_list[del_id-1] != DELETED) {
-            del = {OPTYPE_DELETION, key_list[del_id-1]};
+        if (key_list[del_id - 1] != DELETED) {
+            del = {OPTYPE_DELETION, key_list[del_id - 1]};
         } else {
             del = {OPTYPE_DELETION, rng.rand_key()};
         }
@@ -138,6 +138,7 @@ class RandomisedTreap {
    private:
     treap_node* head;
 
+    // Core helper function for insertion operation
     treap_node* insert_node(treap_node* head, treap_node* n) {
         if (head == NULL) {
             return n;
@@ -169,6 +170,7 @@ class RandomisedTreap {
         return head;
     }
 
+    // Core helper function for search operation
     treap_node* search_node(treap_node* head, int key) {
         if (head->get_key() == key) {
             return head;
@@ -182,12 +184,6 @@ class RandomisedTreap {
         return NULL;
     }
 
-    // TODO: Deletion
-    //  treap_node* delete_node(treap_node* node) {
-    //      if (node->left == NULL && node->right == NULL) {
-    //          return NULL;
-    //      }
-    //  }
 
     treap_node* rotate_left(treap_node* head) {
         treap_node* temp = head->right;
@@ -253,6 +249,7 @@ class RandomisedTreap {
         return false;
     }
 
+    // Core helper function for deletion operation
     void delete_node(treap_node* head, int key) {
         treap_node* parent = find_parent(head, key);
 
@@ -331,7 +328,7 @@ class RandomisedTreap {
         head = insert_node(head, n);
     }
 
-    // Perform deletion operation  TODO: Implement delet
+    // Perform deletion operation
     void delet(int key) {
         if (head == NULL) {
             return;
