@@ -69,7 +69,7 @@ class RandIntGenerator {
 
     int rand_priority() { return prio_dist(engine); }
 };
-RandIntGenerator rng;  // Global Random Int Generator for id, key
+RandIntGenerator rng;  // Global Random Int Generator for id, key, priority
 
 /* ******************************************************************************************** *
  *   DATA GENERATION
@@ -403,12 +403,12 @@ class RandomisedTreap {
 
     int get_height() { return get_height(head, 0); }
 
-    int* get_all_node_depths() {
+    int* get_all_node_depths(int num_nodes) {
         if (head == NULL) {
             return NULL;
         }
 
-        int* depths = (int*)calloc(1024, sizeof(int));
+        int* depths = (int*)calloc(num_nodes, sizeof(int));
         get_all_node_depths(head, 0, 0, depths);
 
         return depths;
@@ -492,15 +492,10 @@ class DynamicArray {
 };
 
 /* ******************************************************************************************** *
- *   MAIN
+ *   TESTS
  * ******************************************************************************************** */
 
-int main(int argc, char** argv) {
-    // Start timer
-    csc::time_point tp0 = csc::now();
-    time_t time0 = chrono::system_clock::to_time_t(tp0);
-
-    cout << "Initialise DataGenerator\n";
+void sanity_test() {
     DataGenerator dg;
 
     cout << "Initialise element\n";
@@ -512,10 +507,62 @@ int main(int argc, char** argv) {
     deletion_op e2 = dg.gen_deletion();
     cout << "Initialise search\n";
     search_op e3 = dg.gen_search();
+}
 
+/* ******************************************************************************************** *
+ *   EXPERIMENTS
+ * ******************************************************************************************** */
+
+void Experiment0() {
+    const int E0_COUNT = 1024;
+    // Initialise Data Structures
+    cout << "Initialise DataGenerator\n";
+    DataGenerator dg;
+    cout << "Initialise RandomisedTreap\n";
+    RandomisedTreap rt;
+
+    // Generate test data
+    cout << "Create 1024 insertions\n";
+    insertion_op insertions[E0_COUNT] = {};
+    for (int i = 0; i < E0_COUNT; i++) {
+        insertions[i] = dg.gen_insertion();
+    }
+
+    cout << "Insert 1024 elements into RandomisedTreap\n";
+    for (int i = 0; i < E0_COUNT; i++) {
+        rt.insert(get<I_OPELEM>(insertions[i]));
+    }
+
+    // Print results
+    cout << "Treap_height=" << rt.get_height() << "\n";
+    int* depths = rt.get_all_node_depths(E0_COUNT);
+    cout << "Avg_node_depth=";
+    for (int i = 0; i < E0_COUNT; i++) {
+        cout << depths[i] << ",";
+    }
+    cout << "\n";
+}
+
+void Experiment1() {
+
+}
+
+/* ******************************************************************************************** *
+ *   MAIN
+ * ******************************************************************************************** */
+
+int main(int argc, char** argv) {
+    // Start timer
+    csc::time_point tp0 = csc::now();
+    time_t time0 = chrono::system_clock::to_time_t(tp0);
+
+    sanity_test();
+
+    // Initialise Data Structures
+    cout << "Initialise DataGenerator\n";
+    DataGenerator dg;
     cout << "Initialise DynamicArray\n";
     DynamicArray da;
-
     cout << "Initialise RandomisedTreap\n";
     RandomisedTreap rt;
 
@@ -564,9 +611,9 @@ int main(int argc, char** argv) {
     rt.print();
 
     cout << "Treap height = " << rt.get_height() << "\n";
-    int* depths = rt.get_all_node_depths();
+    int* depths = rt.get_all_node_depths(10);
     cout << "Avg node depth = [";
-    for (int i = 0; i < 1024; i++) {
+    for (int i = 0; i < 10; i++) {
         cout << depths[i] << ",";
     }
     cout << "]\n";
@@ -575,6 +622,7 @@ int main(int argc, char** argv) {
     time_t time1 = chrono::system_clock::to_time_t(tp1);
 
     chrono::duration<double> elapsed_seconds = tp1 - tp0;
-    cout << "Finished at " << ctime(&time1) << "elapsed time: " << elapsed_seconds.count() << "s\n";
+    cout << "Finished at " << ctime(&time1);
+    cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
     return 0;
 }
