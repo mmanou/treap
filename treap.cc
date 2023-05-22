@@ -15,6 +15,7 @@
 #define KEY_MAX 10000000
 #define PRIORITY_MAX INT_MAX
 #define NOT_FOUND -1
+#define DELETED -1
 
 // Operation Indexes
 #define I_OPTYPE 0  // applies to insertion_op, deletion_op, search_op
@@ -73,14 +74,22 @@ RandIntGenerator rng;  // Global Random Int Generator for id, key
 class DataGenerator {
    private:
     int id_next = 1;
-    bool* exists;
+    int* key_list;
 
    public:
-    DataGenerator() { exists = (bool*)calloc(KEY_MAX, sizeof(bool)); }
-    ~DataGenerator() { free(exists); }
+    DataGenerator() {
+        key_list = (int*)malloc(KEY_MAX * sizeof(int));  // TODO: Might need more than KEY_MAX
+        for (int i=0; i < KEY_MAX; i++) {
+            key_list[i] = DELETED;
+        }
+    }
+    ~DataGenerator() { free(key_list); }
 
     element gen_element() {
-        element elem = {id_next++, rng.rand_key()};
+        int key = rng.rand_key();
+        element elem = {id_next, key};
+        key_list[id_next-1] = key;
+        id_next++;
         return elem;
     }
 
@@ -94,8 +103,8 @@ class DataGenerator {
     deletion_op gen_deletion() {
         int del_id = rng.rand_id(id_next - 1);
         deletion_op del;
-        if (exists[del_id]) {
-            del = {OPTYPE_DELETION, rng.rand_key()};  // TODO: fix
+        if (key_list[del_id-1] != DELETED) {
+            del = {OPTYPE_DELETION, key_list[del_id-1]};
         } else {
             del = {OPTYPE_DELETION, rng.rand_key()};
         }
@@ -134,8 +143,8 @@ class RandomisedTreap {
             return n;
         }
         // perform bst insert
-        if (n->get_key() <= head->get_key()) {
-            if (head->left == NULL) {  // insert here
+        if (n->get_key() <= head->get_key()) {  // TODO: Need to use id to break ties for '==' case
+            if (head->left == NULL) {           // insert here
                 head->left = n;
             } else {  // recurse left
                 head->left = insert_node(head->left, n);
@@ -148,7 +157,8 @@ class RandomisedTreap {
             }
         }
 
-        // if we inserted: fix the heap condition with rotations, then return the new head
+        // TODO: Could move this into the bst insert logic. Might be slightly faster
+        //  if we inserted: fix the heap condition with rotations, then return the new head
         if (head->left != NULL && head->left->priority < head->priority) {
             return rotate_right(head);
         } else if (head->right != NULL && head->right->priority < head->priority) {
@@ -192,8 +202,99 @@ class RandomisedTreap {
         temp->right = head;
         return temp;
     }
-    // treap_node* rotate_leftright() {} // DELETE:
-    // treap_node* rotate_rightleft() {} // DELETE:
+
+    treap_node* find_parent(treap_node* head, int key) {
+        // NOTE: Assumes that head has already been checked, and is not the node
+        if (key < head->get_key()) {
+            if (head->left == NULL) {
+                return NULL;
+            }
+            if (head->left->get_key() == key) {
+                return head;
+            }
+            return find_parent(head->left, key);
+        }
+        if (head->get_key() < key) {
+            if (head->right == NULL) {
+                return NULL;
+            }
+            if (head->right->get_key() == key) {
+                return head;
+            }
+            return find_parent(head->right, key);
+        }
+        return NULL;
+    }
+
+    bool is_leaf_node(treap_node* node) {
+        if (node->left == NULL && node->right == NULL) return true;
+        return false;
+    }
+
+    bool only_has_left_child(treap_node* node) {
+        if (node->left != NULL && node->right == NULL) {
+            return true;
+        }
+        return false;
+    }
+
+    bool only_has_right_child(treap_node* node) {
+        if (node->left == NULL && node->right != NULL) {
+            return true;
+        }
+        return false;
+    }
+
+    // NOTE: Assumes that left and right both exist
+    bool left_smaller_than_right(treap_node* node) {
+        if (node->left->priority <= node->right->priority) {  // TODO: Might need to tiebreak
+            return true;
+        }
+        return false;
+    }
+
+    void delete_node(treap_node* head, int key) {
+        treap_node* parent = find_parent(head, key);
+
+        // TODO: Check that we don't use head for the rest of this function. Only parent.
+        if (parent == NULL) {
+            return;
+        }
+
+        if (key < parent->get_key()) {         // Target node is left child
+            if (is_leaf_node(parent->left)) {  // is leaf => delete
+                delete (parent->left);
+                parent->left = NULL;
+                return;
+            }
+            if (only_has_right_child(parent->left)) {
+                parent->left = rotate_left(parent->left);
+            } else if (only_has_left_child(parent->left)) {
+                parent->left = rotate_right(parent->left);
+            } else if (left_smaller_than_right(parent->left)) {
+                parent->left = rotate_right(parent->left);
+            } else {  // right smaller than left
+                parent->left = rotate_left(parent->left);
+            }
+            delete_node(parent->left, key);
+        } else {                                // Target node is right child
+            if (is_leaf_node(parent->right)) {  // is leaf => delete
+                delete (parent->right);
+                parent->right = NULL;
+                return;
+            }
+            if (only_has_right_child(parent->right)) {
+                parent->right = rotate_left(parent->right);
+            } else if (only_has_left_child(parent->right)) {
+                parent->right = rotate_right(parent->right);
+            } else if (left_smaller_than_right(parent->right)) {
+                parent->right = rotate_right(parent->right);
+            } else {  // right smaller than left
+                parent->right = rotate_left(parent->right);
+            }
+            delete_node(parent->right, key);
+        }
+    }
 
     void print(treap_node* head, int depth) {
         for (int i = 0; i < depth; i++) {
@@ -208,38 +309,52 @@ class RandomisedTreap {
         print(head->right, depth + 1);
     }
 
-    void delete_head(treap_node* head) {
+    // Deallocate all memory
+    void dealloc_head(treap_node* head) {
         if (head == NULL) return;
         if (head->left != NULL) {
-            delete_head(head->left);
+            dealloc_head(head->left);
         }
         if (head->right != NULL) {
-            delete_head(head->right);
+            dealloc_head(head->right);
         }
         delete (head);
     }
 
    public:
     RandomisedTreap() : head(NULL) {}
-    ~RandomisedTreap() { delete_head(head); }
+    ~RandomisedTreap() { dealloc_head(head); }
 
+    // Perform insertion operation
     void insert(element e) {
-        cout << "Insert: " << get<I_ELEMID>(e) << ", " << get<I_ELEMKEY>(e) << '\n';
         treap_node* n = new treap_node(e, rng.rand_priority());
         head = insert_node(head, n);
     }
 
-    // TODO: Deletion
-    //  void delet(int key) {
-    //      head = delete_node(head, key);
+    // Perform deletion operation  TODO: Implement delet
+    void delet(int key) {
+        if (head == NULL) {
+            return;
+        }
+        if (head->get_key() == key) {
+            if (is_leaf_node(head)) {  // is leaf => delete
+                delete (head);
+                head = NULL;
+                return;
+            } else if (only_has_right_child(head)) {
+                head = rotate_left(head);
+            } else if (only_has_left_child(head)) {
+                head = rotate_right(head);
+            } else if (left_smaller_than_right(head)) {
+                head = rotate_right(head);
+            } else {  // right smaller than left
+                head = rotate_left(head);
+            }
+        }
+        delete_node(head, key);
+    }
 
-    //     treap_node* node = search_node(head, key);
-    //     if (node == NULL) {
-    //         return;
-    //     }
-    //     delete_node(node);
-    // }
-
+    // Perform search operation
     element* search(int key) {
         treap_node* node = search_node(head, key);
         if (node == NULL) {
@@ -361,24 +476,34 @@ int main(int argc, char** argv) {
     cout << "Initialise RandomisedTreap\n";
     RandomisedTreap rt;
 
-    cout << "Create 1000 insertions\n";
-    insertion_op insert1k[1000] = {};
-    for (int i = 0; i < 1000; i++) {
+    cout << "Create 10 insertions\n";
+    insertion_op insert1k[10] = {};
+    for (int i = 0; i < 10; i++) {
         insert1k[i] = dg.gen_insertion();
     }
 
-    cout << "1000 insertions into DynamicArray\n";
-    for (int i = 0; i < 1000; i++) {
-        da.insert(get<I_OPELEM>(insert1k[i]));
-    }
+    // cout << "1000 insertions into DynamicArray\n";
+    // for (int i = 0; i < 1000; i++) {
+    //     da.insert(get<I_OPELEM>(insert1k[i]));
+    // }
 
     cout << "10 insertions into RandomisedTreap\n";
     for (int i = 0; i < 10; i++) {
         rt.insert(get<I_OPELEM>(insert1k[i]));
     }
 
-    cout << "print DynamicArray\n";
-    da.print();
+    // cout << "print DynamicArray\n";
+    // da.print();
+
+    cout << "print RandomisedTreap\n";
+    rt.print();
+
+    cout << "5 deletions from RandomisedTreap\n";
+    for (int i = 0; i < 5; i++) {
+        deletion_op d = dg.gen_deletion();
+        cout << "deleting key=" << get<I_OPKEY>(d) << '\n';
+        rt.delet(get<I_OPKEY>(d));
+    }
 
     cout << "print RandomisedTreap\n";
     rt.print();
