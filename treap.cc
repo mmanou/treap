@@ -5,16 +5,18 @@
  *  Date: 18/05/2023
  * ******************************************************************************************** */
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <climits>
 #include <ctime>
 #include <iostream>
+#include <iterator>
 #include <random>
 #include <tuple>
+#include <vector>
 
-// #define KEY_MAX 10000000
-#define KEY_MAX 100
+#define KEY_MAX 10000000
 #define PRIORITY_MAX INT_MAX
 #define NOT_FOUND -1
 #define DELETED -1
@@ -68,8 +70,65 @@ class RandIntGenerator {
     int rand_key() { return key_dist(engine); }
 
     int rand_priority() { return prio_dist(engine); }
+
+    /* @param type{int} OPTYPE_INSERTION, OPTYPE_DELETION, or OPTYPE_SEARCH*/
+    vector<int> rand_update_sequence(int num_updates, int type1, int count1, int type2,
+                                     int count2) {
+        assert(("Invalid input for type1: expected an OPTYPE",
+                type1 == OPTYPE_INSERTION || type1 == OPTYPE_INSERTION || type1 == OPTYPE_SEARCH));
+        assert(("Invalid input for type2: expected an OPTYPE",
+                type2 == OPTYPE_INSERTION || type2 == OPTYPE_INSERTION || type2 == OPTYPE_SEARCH));
+
+        assert(("Incorrect input: Expected count1 + count2 == num_updates",
+                count1 + count2 == num_updates));
+
+        vector<int> vec(num_updates);
+        assert(("Constructor capacity doesn't work how you think it does",
+                vec.capacity() >= num_updates));
+
+        for (int i = 0; i < count1; i++) {
+            vec.push_back(type1);
+        }
+        for (int i = count1; i < num_updates; i++) {
+            vec.push_back(type2);
+        }
+
+        std::shuffle(vec.begin(), vec.end(), engine);
+        return vec;
+    }
+
+    /* @param type{int} OPTYPE_INSERTION, OPTYPE_DELETION, or OPTYPE_SEARCH*/
+    vector<int> rand_update_sequence(int num_updates, int type1, int count1, int type2, int count2,
+                                     int type3, int count3) {
+        assert(("Incorrect input: Expected count1 + count2 + count 3 == num_updates",
+                count1 + count2 + count3 == num_updates));
+        assert(("Invalid input for type1: expected an OPTYPE",
+                type1 == OPTYPE_INSERTION || type1 == OPTYPE_INSERTION || type1 == OPTYPE_SEARCH));
+        assert(("Invalid input for type2: expected an OPTYPE",
+                type2 == OPTYPE_INSERTION || type2 == OPTYPE_INSERTION || type2 == OPTYPE_SEARCH));
+        assert(("Invalid input for type3: expected an OPTYPE",
+                type3 == OPTYPE_INSERTION || type3 == OPTYPE_INSERTION || type3 == OPTYPE_SEARCH));
+
+        vector<int> vec(num_updates);
+        assert(("Constructor capacity doesn't work how you think it does",
+                vec.capacity() >= num_updates));
+
+        for (int i = 0; i < count1; i++) {
+            vec.push_back(type1);
+        }
+        int next_lim = count1 + count2;
+        for (int i = count1; i < next_lim; i++) {
+            vec.push_back(type2);
+        }
+        for (int i = next_lim; i < num_updates; i++) {
+            vec.push_back(type3);
+        }
+
+        std::shuffle(vec.begin(), vec.end(), engine);
+        return vec;
+    }
 };
-RandIntGenerator rng;  // Global Random Int Generator for id, key, priority
+RandIntGenerator rng;  // Global Random Int Generator for (id, key, priority), and update sequences
 
 /* ******************************************************************************************** *
  *   DATA GENERATION
@@ -324,7 +383,8 @@ class RandomisedTreap {
         }
         depth_array[curr_id] = curr_depth;
         curr_id = get_all_node_depths(node->left, curr_id + 1, curr_depth + 1, depth_array);
-        curr_id = get_all_node_depths(node->right, curr_id + 1, curr_depth + 1, depth_array);
+        curr_id = get_all_node_depths(node->right, curr_id, curr_depth + 1,
+                                      depth_array);  // TODO: Double-check increment of curr_id
         return curr_id;
     }
 
@@ -336,7 +396,8 @@ class RandomisedTreap {
             cout << "*EMPTY*\n";
             return;
         }
-        cout << '(' << head->get_id() << ", " << head->get_key() << ", " << head->priority << ")\n";
+        cout << '(' << head->get_id() << ", " << head->get_key() << ", " << head->priority
+             << ")\n";
         print(head->left, depth + 1);
         print(head->right, depth + 1);
     }
@@ -513,17 +574,16 @@ void sanity_test() {
  *   EXPERIMENTS
  * ******************************************************************************************** */
 
-void Experiment0() {
+void experiment0() {
+    cout << "==Experiment 0==\n";
     const int E0_COUNT = 1024;
     // Initialise Data Structures
-    cout << "Initialise DataGenerator\n";
     DataGenerator dg;
-    cout << "Initialise RandomisedTreap\n";
     RandomisedTreap rt;
 
     // Generate test data
     cout << "Create 1024 insertions\n";
-    insertion_op insertions[E0_COUNT] = {};
+    insertion_op* insertions = (insertion_op*)malloc(E0_COUNT * sizeof(insertion_op));
     for (int i = 0; i < E0_COUNT; i++) {
         insertions[i] = dg.gen_insertion();
     }
@@ -541,10 +601,74 @@ void Experiment0() {
         cout << depths[i] << ",";
     }
     cout << "\n";
+
+    free(insertions);
 }
 
-void Experiment1() {
+void experiment1() {
+    cout << "==Experiment 1==\n";
+    // Initialise Data Structures
+    DataGenerator dg;
+    DynamicArray da;
+    RandomisedTreap rt;
 
+    const int NUM_INSERTIONS = 1000000;
+
+    // Generate insertions
+    cout << "Create 1M insertions\n";
+    insertion_op* insertions = (insertion_op*)malloc(NUM_INSERTIONS * sizeof(insertion_op));
+    for (int i = 0; i < NUM_INSERTIONS; i++) {
+        insertions[i] = dg.gen_insertion();
+    }
+
+    // Start test on DynamicArray
+    cout << NUM_INSERTIONS << " insertions into DynamicArray\n";
+    // Start timer
+    csc::time_point tp0 = csc::now();
+    time_t time0 = chrono::system_clock::to_time_t(tp0);
+
+    for (int i = 0; i < NUM_INSERTIONS; i++) {
+        da.insert(get<I_OPELEM>(insertions[i]));
+    }
+
+    // Stop timer
+    csc::time_point tp1 = csc::now();
+    time_t time1 = chrono::system_clock::to_time_t(tp1);
+    chrono::duration<double> elapsed_seconds = tp1 - tp0;
+    cout << "Finished "
+         << "insertions into DynamicArray at " << ctime(&time1)
+         << "Elapsed time: " << elapsed_seconds.count() << "s\n\n";
+
+    // Start test on RandomisedTreap
+    cout << NUM_INSERTIONS << " insertions into RandomisedTreap\n";
+    // Start timer
+    csc::time_point tp2 = csc::now();
+    time_t time2 = chrono::system_clock::to_time_t(tp2);
+
+    for (int i = 0; i < NUM_INSERTIONS; i++) {
+        rt.insert(get<I_OPELEM>(insertions[i]));
+    }
+
+    // Stop timer
+    csc::time_point tp3 = csc::now();
+    time_t time3 = chrono::system_clock::to_time_t(tp3);
+    chrono::duration<double> elapsed_seconds2 = tp3 - tp2;
+    cout << "Finished "
+         << "insertions into RandomisedTreap at " << ctime(&time3)
+         << "Elapsed time: " << elapsed_seconds2.count() << "s\n\n";
+
+    free(insertions);
+}
+
+void experiment2() {
+    cout << "==Experiment 2==\n";
+    // Initialise Data Structures
+    DataGenerator dg;
+    RandomisedTreap rt;
+
+    const int chance_delete = 5;  // out of 100
+    // Generate update sequence
+    vector<int> updates = rng.rand_update_sequence(100, OPTYPE_INSERTION, 50, OPTYPE_DELETION, 50);
 }
 
 /* ******************************************************************************************** *
@@ -624,5 +748,9 @@ int main(int argc, char** argv) {
     chrono::duration<double> elapsed_seconds = tp1 - tp0;
     cout << "Finished at " << ctime(&time1);
     cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
+
+    experiment0();
+    experiment1();
+
     return 0;
 }
