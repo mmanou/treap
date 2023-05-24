@@ -3,6 +3,9 @@
  *  Title: An Experimental Study on Treaps
  *  Author: Michael Manoussakis (834867)
  *  Date: 18/05/2023
+ *
+ *  To compile, run:
+ *    g++ -std=c++14 -O3 -o treap.exe treap.cc
  * ******************************************************************************************** */
 
 #include <algorithm>
@@ -170,7 +173,7 @@ class DataGenerator {
 
    public:
     DataGenerator() {
-        key_list = (int*)malloc(KEY_MAX * sizeof(int));  // TODO: Might need more than KEY_MAX
+        key_list = (int*)malloc(KEY_MAX * sizeof(int));  // NOTE: Might need more than KEY_MAX
         for (int i = 0; i < KEY_MAX; i++) {
             key_list[i] = DELETED;
         }
@@ -318,31 +321,6 @@ class RandomisedTreap {
         }
         return NULL;
     }
-
-    // DELETE: unused old function
-    // treap_node* find_parent(treap_node* head, int key) {
-    //     // NOTE: Assumes that head has already been checked, and is not the node.
-    //     // However, we cannot check again, because it might have a duplicate key.
-    //     if (key < head->get_key()) {
-    //         if (head->left == NULL) {
-    //             return NULL;
-    //         }
-    //         if (head->left->get_key() == key) {
-    //             return head;
-    //         }
-    //         return find_parent(head->left, key);
-    //     }
-    //     if (head->get_key() < key) {
-    //         if (head->right == NULL) {
-    //             return NULL;
-    //         }
-    //         if (head->right->get_key() == key) {
-    //             return head;
-    //         }
-    //         return find_parent(head->right, key);
-    //     }
-    //     return NULL;
-    // }
 
     bool is_leaf_node(treap_node* node) {
         if (node == NULL) {
@@ -1090,8 +1068,7 @@ void experiment4_phase(const int num_operations, const int num_insertions, const
     assert(("Insertions not all completed", next_insertion == num_insertions));
     assert(("Deletions not all completed", next_deletion == num_deletions));
     assert(("Searches not all completed", next_search == num_searches));
-    // assert(("Heap condition was not satisfied", r_treap.heap_condition_satisfied())); //DELETE:
-    assert(("BST condition was not satisfied", r_treap.bst_condition_satisfied()));  // DELETE:
+    assert(("BST condition was not satisfied", r_treap.bst_condition_satisfied()));
     free(insertions);
     free(deletions);
     free(searches);
@@ -1199,10 +1176,10 @@ int main(int argc, char** argv) {
     cout << "Finished at " << ctime(&time1);
     cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 
-    // experiment0();
-    // experiment1();
-    // experiment2();
-    // experiment3();
+    experiment0();
+    experiment1();
+    experiment2();
+    experiment3();
     experiment4();
 
     return 0;
