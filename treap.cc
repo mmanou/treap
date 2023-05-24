@@ -207,6 +207,21 @@ class DataGenerator {
         search_op sch = {OPTYPE_SEARCH, rng.rand_key()};
         return sch;
     }
+
+    // For experiment 0 only
+    element gen_specific_element(int key) {
+        element elem = {id_next, key};
+        key_list[id_next - 1] = key;
+        id_next++;
+        return elem;
+    }
+    // For experiment 0 only
+    insertion_op gen_specific_insertion(int key) {
+        element elem = gen_specific_element(key);
+        insertion_op ins = {OPTYPE_INSERTION, elem};
+
+        return ins;
+    }
 };
 
 /* ******************************************************************************************** *
@@ -424,6 +439,15 @@ class RandomisedTreap {
         return max(get_height(node->left, depth + 1), get_height(node->right, depth + 1));
     }
 
+    // Core helper function for heigh and node depth
+    int get_height_and_depths_e0(treap_node* node, int* total_depths, int depth) {
+        if (node == NULL) {
+            return depth;
+        }
+        total_depths[node->get_key()] += depth;
+        return max(get_height_and_depths_e0(node->left, total_depths, depth + 1), get_height_and_depths_e0(node->right, total_depths, depth + 1));
+    }
+
     // Core helper function for node depth
     int get_all_node_depths(treap_node* node, int curr_id, int curr_depth, int* depth_array) {
         if (node == NULL) {
@@ -434,6 +458,17 @@ class RandomisedTreap {
         curr_id = get_all_node_depths(node->right, curr_id, curr_depth + 1,
                                       depth_array);  // TODO: Double-check increment of curr_id
         return curr_id;
+    }
+
+    int find_depth_of_key_node(treap_node* node, const int key, int depth) {
+        if (node == NULL) {
+            return NOT_FOUND;
+        }
+        if (node->get_key() == key) {
+            return depth;
+        }
+        return max(find_depth_of_key_node(node->left, key, depth + 1),
+                   find_depth_of_key_node(node->right, key, depth + 1));
     }
 
     void print(treap_node* head, int depth) {
@@ -560,7 +595,13 @@ class RandomisedTreap {
         return &node->elem;
     }
 
+    int find_depth_of_key(const int key) { return find_depth_of_key_node(head, key, 0); }
+
     int get_height() { return get_height(head, 0); }
+
+    int get_height_and_depths_e0(int* total_depths) {
+        return get_height_and_depths_e0(head, total_depths, 0);
+    }
 
     int* get_all_node_depths(int num_nodes) {
         if (head == NULL) {
@@ -686,19 +727,27 @@ void sanity_test() {
  *   EXPERIMENTS
  * ******************************************************************************************** */
 
-void experiment0() {
-    cout << "==Experiment 0==\n";
+void experiment0_phase(int* total_depths) {
     const int E0_COUNT = 1024;
+    const int KEY_511 = 511;
     // Initialise Data Structures
-    DataGenerator dyn_array;
+    DataGenerator dg;
     RandomisedTreap r_treap;
 
     // Generate test data
     cout << "Create 1024 insertions\n";
-    insertion_op* insertions = (insertion_op*)malloc(E0_COUNT * sizeof(insertion_op));
+    vector<insertion_op> insertions;
+    // insertion_op* insertions = (insertion_op*)malloc(E0_COUNT * sizeof(insertion_op));
     for (int i = 0; i < E0_COUNT; i++) {
-        insertions[i] = dyn_array.gen_insertion();
+        insertions.push_back(dg.gen_specific_insertion(i));
     }
+
+    // shuffle insertions
+    random_device rd;
+    mt19937 engine{rd()};
+    std::shuffle(insertions.begin(), insertions.end(), engine);
+
+    assert(("Expected 1024 insertions", insertions.size() == E0_COUNT));
 
     cout << "Insert 1024 elements into RandomisedTreap\n";
     for (int i = 0; i < E0_COUNT; i++) {
@@ -707,16 +756,39 @@ void experiment0() {
 
     // Print results
     cout << "Treap_height=" << r_treap.get_height() << "\n";
-    int* depths = r_treap.get_all_node_depths(E0_COUNT);
-    cout << "Avg_node_depth=";
-    for (int i = 0; i < E0_COUNT; i++) {
-        cout << depths[i] << ",";
-    }
-    cout << "\n";
+    // int* depths = r_treap.get_all_node_depths(E0_COUNT); // DELETE:
+    cout << "KEY 512 Depth=" << r_treap.find_depth_of_key(KEY_511);
+    r_treap.get_height_and_depths_e0(total_depths);
 
-    free(depths);
-    free(insertions);
+    // DELETE:
+    // cout << "Node_depths=";
+    // for (int i = 0; i < E0_COUNT; i++) {
+    //     cout << depths[i] << ",";
+    // }
+    // cout << "\n";
+
+    // free(depths);
+
 }
+
+void experiment0() {
+    const int E0_COUNT = 1024;
+    const int NUM_TRIALS = 100;
+    int* total_depths = (int *)calloc(E0_COUNT, sizeof(int));
+
+    for (int i=0; i<NUM_TRIALS; i++) {
+        experiment0_phase(total_depths);
+    }
+
+    cout << "average_depths=[";
+    for (int i=0; i<E0_COUNT; i++) {
+        cout << (total_depths[i] / NUM_TRIALS) << ", ";
+    }
+    cout << "]\n";
+
+    free(total_depths);
+}
+
 
 void experiment1_phase(const int num_insertions) {
     // Initialise Data Structures
@@ -1130,8 +1202,8 @@ int main(int argc, char** argv) {
     // experiment0();
     // experiment1();
     // experiment2();
-    experiment3();
-    // experiment4();
+    // experiment3();
+    experiment4();
 
     return 0;
 }
