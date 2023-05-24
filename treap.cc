@@ -46,6 +46,18 @@ typedef tuple<int, int> deletion_op;       // {I_OPTYPE: OPTYPE_DELETION,  I_OPK
 typedef tuple<int, int> search_op;         // {I_OPTYPE: OPTYPE_SEARCH,    I_OPKEY   int}
 
 /* ******************************************************************************************** *
+ *   TIMER
+ * ******************************************************************************************** */
+/* @param start csc::time_point start = csc::now();
+ * @param end csc::time_point end = csc::now(); */
+void print_time(csc::time_point start, csc::time_point end, string activity) {
+    time_t t = csc::to_time_t(end);
+    chrono::duration<double> elapsed_seconds = end - start;
+    cout << "Finished " << activity << " at " << ctime(&t)
+         << "Elapsed time: " << elapsed_seconds.count() << "s\n\n";
+}
+
+/* ******************************************************************************************** *
  *   RANDOM NUMBER GENERATION
  * ******************************************************************************************** */
 
@@ -72,42 +84,53 @@ class RandIntGenerator {
     int rand_priority() { return prio_dist(engine); }
 
     /* @param type{int} OPTYPE_INSERTION, OPTYPE_DELETION, or OPTYPE_SEARCH*/
-    vector<int> rand_update_sequence(int num_updates, int type1, int count1, int type2,
-                                     int count2) {
+    vector<int> rand_update_sequence2(int num_updates, int type1, int count1, int type2,
+                                      int count2) {
         assert(("Invalid input for type1: expected an OPTYPE",
-                type1 == OPTYPE_INSERTION || type1 == OPTYPE_INSERTION || type1 == OPTYPE_SEARCH));
+                type1 == OPTYPE_INSERTION || type1 == OPTYPE_DELETION || type1 == OPTYPE_SEARCH));
         assert(("Invalid input for type2: expected an OPTYPE",
-                type2 == OPTYPE_INSERTION || type2 == OPTYPE_INSERTION || type2 == OPTYPE_SEARCH));
+                type2 == OPTYPE_INSERTION || type2 == OPTYPE_DELETION || type2 == OPTYPE_SEARCH));
 
         assert(("Incorrect input: Expected count1 + count2 == num_updates",
                 count1 + count2 == num_updates));
 
-        vector<int> vec(num_updates);
-        assert(("Constructor capacity doesn't work how you think it does",
-                vec.capacity() >= num_updates));
+        vector<int> vec;
+        // assert(("Constructor capacity doesn't work how you think it does",
+        //         vec.capacity() >= num_updates));
 
         for (int i = 0; i < count1; i++) {
             vec.push_back(type1);
         }
-        for (int i = count1; i < num_updates; i++) {
+        for (int i = 0; i < count2; i++) {
             vec.push_back(type2);
         }
 
         std::shuffle(vec.begin(), vec.end(), engine);
+
+        cout << "shuffled vector: length=" << vec.size() << " vec=[";
+        for (int i = 0; i < 10; i++) {
+            cout << vec[i] << ',';
+        }
+        cout << "...";
+        for (int i = num_updates - 10; i < num_updates; i++) {
+            cout << ',' << vec[i];
+        }
+        cout << "]\n";
+
         return vec;
     }
 
     /* @param type{int} OPTYPE_INSERTION, OPTYPE_DELETION, or OPTYPE_SEARCH*/
-    vector<int> rand_update_sequence(int num_updates, int type1, int count1, int type2, int count2,
-                                     int type3, int count3) {
+    vector<int> rand_update_sequence3(int num_updates, int type1, int count1, int type2,
+                                      int count2, int type3, int count3) {
         assert(("Incorrect input: Expected count1 + count2 + count 3 == num_updates",
                 count1 + count2 + count3 == num_updates));
         assert(("Invalid input for type1: expected an OPTYPE",
-                type1 == OPTYPE_INSERTION || type1 == OPTYPE_INSERTION || type1 == OPTYPE_SEARCH));
+                type1 == OPTYPE_INSERTION || type1 == OPTYPE_DELETION || type1 == OPTYPE_SEARCH));
         assert(("Invalid input for type2: expected an OPTYPE",
-                type2 == OPTYPE_INSERTION || type2 == OPTYPE_INSERTION || type2 == OPTYPE_SEARCH));
+                type2 == OPTYPE_INSERTION || type2 == OPTYPE_DELETION || type2 == OPTYPE_SEARCH));
         assert(("Invalid input for type3: expected an OPTYPE",
-                type3 == OPTYPE_INSERTION || type3 == OPTYPE_INSERTION || type3 == OPTYPE_SEARCH));
+                type3 == OPTYPE_INSERTION || type3 == OPTYPE_DELETION || type3 == OPTYPE_SEARCH));
 
         vector<int> vec(num_updates);
         assert(("Constructor capacity doesn't work how you think it does",
@@ -116,11 +139,10 @@ class RandIntGenerator {
         for (int i = 0; i < count1; i++) {
             vec.push_back(type1);
         }
-        int next_lim = count1 + count2;
-        for (int i = count1; i < next_lim; i++) {
+        for (int i = 0; i < count2; i++) {
             vec.push_back(type2);
         }
-        for (int i = next_lim; i < num_updates; i++) {
+        for (int i = 0; i < count3; i++) {
             vec.push_back(type3);
         }
 
@@ -207,7 +229,7 @@ class RandomisedTreap {
             return n;
         }
         // perform bst insert
-        if (n->get_key() <= head->get_key()) {  // TODO: Need to use id to break ties for '==' case
+        if (n->get_key() <= head->get_key()) {  // TODO: Can use id to break ties for '==' case
             if (head->left == NULL) {           // insert here
                 head->left = n;
             } else {  // recurse left
@@ -261,29 +283,44 @@ class RandomisedTreap {
         return temp;
     }
 
-    treap_node* find_parent(treap_node* head, int key) {
-        // NOTE: Assumes that head has already been checked, and is not the node.
-        // However, we cannot check again, because it might have a duplicate key.
-        if (key < head->get_key()) {
-            if (head->left == NULL) {
-                return NULL;
-            }
-            if (head->left->get_key() == key) {
-                return head;
-            }
-            return find_parent(head->left, key);
+    treap_node* search_parent(treap_node* parent, treap_node* node, int key) {
+        if (parent != NULL && node->get_key() == key) {
+            node->priority = INT_MAX;  // mark for deletion
+            return parent;
         }
-        if (head->get_key() < key) {
-            if (head->right == NULL) {
-                return NULL;
-            }
-            if (head->right->get_key() == key) {
-                return head;
-            }
-            return find_parent(head->right, key);
+        if (key < node->get_key() && node->left != NULL) {  // go left
+            return search_parent(node, node->left, key);
+        }
+        if (node->get_key() < key && node->right != NULL) {  // go right
+            return search_parent(node, node->right, key);
         }
         return NULL;
     }
+
+    // DELETE: unused old function
+    // treap_node* find_parent(treap_node* head, int key) {
+    //     // NOTE: Assumes that head has already been checked, and is not the node.
+    //     // However, we cannot check again, because it might have a duplicate key.
+    //     if (key < head->get_key()) {
+    //         if (head->left == NULL) {
+    //             return NULL;
+    //         }
+    //         if (head->left->get_key() == key) {
+    //             return head;
+    //         }
+    //         return find_parent(head->left, key);
+    //     }
+    //     if (head->get_key() < key) {
+    //         if (head->right == NULL) {
+    //             return NULL;
+    //         }
+    //         if (head->right->get_key() == key) {
+    //             return head;
+    //         }
+    //         return find_parent(head->right, key);
+    //     }
+    //     return NULL;
+    // }
 
     bool is_leaf_node(treap_node* node) {
         if (node == NULL) {
@@ -331,6 +368,8 @@ class RandomisedTreap {
             (key == parent->get_key() && parent->left != NULL &&
              key == parent->left->get_key())) {  // Target node is left child
             assert(("ERROR: Expected left child to exist", parent->left != NULL));
+            assert(
+                ("ERROR: Expected left child to be the target", parent->left->get_key() == key));
 
             if (is_leaf_node(parent->left)) {  // is leaf => delete
                 delete (parent->left);
@@ -349,6 +388,8 @@ class RandomisedTreap {
             delete_node(parent->left, key);
         } else {  // Target node is right child
             assert(("ERROR: Expected right child to exist", parent->right != NULL));
+            assert(
+                ("ERROR: Expected right child to be the target", parent->right->get_key() == key));
 
             if (is_leaf_node(parent->right)) {  // is leaf => delete
                 delete (parent->right);
@@ -402,6 +443,40 @@ class RandomisedTreap {
         print(head->right, depth + 1);
     }
 
+    bool heap_condition_satisfied(int parent_prio, treap_node* node) {
+        if (node == NULL) {
+            return true;
+        }
+        if (node->priority < parent_prio) {
+            cout << "Failed heap condition: prio=" << node->priority
+                 << " parent_prio=" << parent_prio << '\n';
+
+            return false;
+        }
+        return heap_condition_satisfied(node->priority, node->left) &&
+               heap_condition_satisfied(node->priority, node->right);
+    }
+
+    bool bst_condition_satisfied(treap_node* node) {
+        if (node == NULL) {
+            return true;
+        }
+        if (node->left != NULL && node->get_key() < node->left->get_key()) {
+            return false;
+        }
+        if (node->right != NULL && node->get_key() > node->right->get_key()) {
+            return false;
+        }
+
+        bool satisfied =
+            (bst_condition_satisfied(node->left) && bst_condition_satisfied(node->right));
+
+        if (!satisfied) {
+            cout << "Failed bst condition\n";
+        }
+        return satisfied;
+    }
+
     // Deallocate all memory
     void dealloc_head(treap_node* head) {
         if (head == NULL) return;
@@ -430,27 +505,43 @@ class RandomisedTreap {
             return;
         }
         if (head->get_key() == key) {
+            cout << "Head deletion\n";
+            head->priority = INT_MAX;
+
             if (is_leaf_node(head)) {  // is leaf => delete
                 delete (head);
                 head = NULL;
                 return;
             } else if (only_has_right_child(head)) {
                 head = rotate_left(head);
+                delete (head->left);
+                head->left = NULL;
+                return;
             } else if (only_has_left_child(head)) {
                 head = rotate_right(head);
+                delete (head->right);
+                head->right = NULL;
+                return;
             } else if (left_smaller_than_right(head)) {
                 head = rotate_right(head);
+                delete_node(head, key);
+                return;
             } else {  // right smaller than left
                 head = rotate_left(head);
+                delete_node(head, key);
+                return;
             }
-            delete_node(head, key);
             return;
         }
-        treap_node* parent = find_parent(head, key);
+        treap_node* parent = search_parent(NULL, head, key);
         if (parent == NULL) {
             return;
         }
         delete_node(parent, key);
+        //  DELETE:
+        // if (!heap_condition_satisfied(INT_MIN, parent)) {
+        //     print(parent, 0);
+        // }
     }
 
     // Perform search operation
@@ -473,6 +564,20 @@ class RandomisedTreap {
         get_all_node_depths(head, 0, 0, depths);
 
         return depths;
+    }
+
+    bool heap_condition_satisfied() {
+        if (head == NULL) {
+            return true;
+        }
+        return heap_condition_satisfied(INT_MIN, head);
+    }
+
+    bool bst_condition_satisfied() {
+        if (head == NULL) {
+            return true;
+        }
+        return bst_condition_satisfied(head);
     }
 
     void print() { print(head, 0); }
@@ -531,7 +636,7 @@ class DynamicArray {
         list[pos] = list[count];
         list[count] = temp;
 
-        if (count < capacity / 4) {
+        if (count < (capacity / 4)) {
             shrink();
         }
     }
@@ -578,24 +683,24 @@ void experiment0() {
     cout << "==Experiment 0==\n";
     const int E0_COUNT = 1024;
     // Initialise Data Structures
-    DataGenerator dg;
-    RandomisedTreap rt;
+    DataGenerator dyn_array;
+    RandomisedTreap r_treap;
 
     // Generate test data
     cout << "Create 1024 insertions\n";
     insertion_op* insertions = (insertion_op*)malloc(E0_COUNT * sizeof(insertion_op));
     for (int i = 0; i < E0_COUNT; i++) {
-        insertions[i] = dg.gen_insertion();
+        insertions[i] = dyn_array.gen_insertion();
     }
 
     cout << "Insert 1024 elements into RandomisedTreap\n";
     for (int i = 0; i < E0_COUNT; i++) {
-        rt.insert(get<I_OPELEM>(insertions[i]));
+        r_treap.insert(get<I_OPELEM>(insertions[i]));
     }
 
     // Print results
-    cout << "Treap_height=" << rt.get_height() << "\n";
-    int* depths = rt.get_all_node_depths(E0_COUNT);
+    cout << "Treap_height=" << r_treap.get_height() << "\n";
+    int* depths = r_treap.get_all_node_depths(E0_COUNT);
     cout << "Avg_node_depth=";
     for (int i = 0; i < E0_COUNT; i++) {
         cout << depths[i] << ",";
@@ -609,8 +714,8 @@ void experiment1() {
     cout << "==Experiment 1==\n";
     // Initialise Data Structures
     DataGenerator dg;
-    DynamicArray da;
-    RandomisedTreap rt;
+    DynamicArray dyn_array;
+    RandomisedTreap r_treap;
 
     const int NUM_INSERTIONS = 1000000;
 
@@ -623,52 +728,110 @@ void experiment1() {
 
     // Start test on DynamicArray
     cout << NUM_INSERTIONS << " insertions into DynamicArray\n";
-    // Start timer
-    csc::time_point tp0 = csc::now();
-    time_t time0 = chrono::system_clock::to_time_t(tp0);
-
+    csc::time_point start_da = csc::now();  // Start timer
     for (int i = 0; i < NUM_INSERTIONS; i++) {
-        da.insert(get<I_OPELEM>(insertions[i]));
+        dyn_array.insert(get<I_OPELEM>(insertions[i]));
     }
-
-    // Stop timer
-    csc::time_point tp1 = csc::now();
-    time_t time1 = chrono::system_clock::to_time_t(tp1);
-    chrono::duration<double> elapsed_seconds = tp1 - tp0;
-    cout << "Finished "
-         << "insertions into DynamicArray at " << ctime(&time1)
-         << "Elapsed time: " << elapsed_seconds.count() << "s\n\n";
+    csc::time_point end_da = csc::now();  // Stop timer
+    print_time(start_da, end_da, "insertions into DynamicArray");
 
     // Start test on RandomisedTreap
     cout << NUM_INSERTIONS << " insertions into RandomisedTreap\n";
-    // Start timer
-    csc::time_point tp2 = csc::now();
-    time_t time2 = chrono::system_clock::to_time_t(tp2);
-
+    csc::time_point start_rt = csc::now();  // Start timer
     for (int i = 0; i < NUM_INSERTIONS; i++) {
-        rt.insert(get<I_OPELEM>(insertions[i]));
+        r_treap.insert(get<I_OPELEM>(insertions[i]));
     }
-
-    // Stop timer
-    csc::time_point tp3 = csc::now();
-    time_t time3 = chrono::system_clock::to_time_t(tp3);
-    chrono::duration<double> elapsed_seconds2 = tp3 - tp2;
-    cout << "Finished "
-         << "insertions into RandomisedTreap at " << ctime(&time3)
-         << "Elapsed time: " << elapsed_seconds2.count() << "s\n\n";
+    csc::time_point end_rt = csc::now();  // Stop timer
+    print_time(start_rt, end_rt, "insertions into RandomisedTreap");
 
     free(insertions);
 }
 
-void experiment2() {
-    cout << "==Experiment 2==\n";
+void experiment2_phase(const int num_insertions, const int num_deletions) {
+    const int NUM_OPERATIONS = 1000000;
+    assert(("Expected num_insertions + num_deletions == NUM_OPERATIONS",
+            num_insertions + num_deletions == NUM_OPERATIONS));
+
     // Initialise Data Structures
     DataGenerator dg;
-    RandomisedTreap rt;
+    DynamicArray dyn_array;
+    RandomisedTreap r_treap;
 
-    const int chance_delete = 5;  // out of 100
     // Generate update sequence
-    vector<int> updates = rng.rand_update_sequence(100, OPTYPE_INSERTION, 50, OPTYPE_DELETION, 50);
+    insertion_op* insertions = (insertion_op*)malloc(num_insertions * sizeof(insertion_op));
+    for (int i = 0; i < num_insertions; i++) {
+        insertions[i] = dg.gen_insertion();
+    }
+    deletion_op* deletions = (deletion_op*)malloc(num_deletions * sizeof(deletion_op));
+    for (int i = 0; i < num_deletions; i++) {
+        deletions[i] = dg.gen_deletion();
+    }
+    vector<int> updates = rng.rand_update_sequence2(
+        NUM_OPERATIONS, OPTYPE_INSERTION, num_insertions, OPTYPE_DELETION, num_deletions);
+
+    // Start test on DynamicArray
+    int next_insertion = 0;
+    int next_deletion = 0;
+    // cout << NUM_OPERATIONS << " insertions, deletions on DynamicArray\n"; TODO: Uncomment
+    // csc::time_point start_da = csc::now();  // Start timer
+    // for (int i = 0; i < NUM_OPERATIONS; i++) {
+    //     if (updates[i] == OPTYPE_INSERTION) {
+    //         dyn_array.insert(get<I_OPELEM>(insertions[next_insertion++]));
+    //     } else {  // OPTYPE_DELETION
+    //         dyn_array.delet(get<I_OPKEY>(deletions[next_deletion++]));
+    //     }
+    // }
+    // csc::time_point end_da = csc::now();  // Stop timer
+    // print_time(start_da, end_da, "insertions, deletions on DynamicArray");
+
+    // assert(("Insertions not all completed", next_insertion == num_insertions));
+    // assert(("Deletions not all completed", next_deletion == num_deletions));
+
+    // Start test on RandomisedTreap
+    next_insertion = 0;
+    next_deletion = 0;
+    cout << NUM_OPERATIONS << " insertions, deletions on RandomisedTreap\n";
+    csc::time_point start_rt = csc::now();  // Start timer
+    for (int i = 0; i < NUM_OPERATIONS; i++) {
+        if (updates[i] == OPTYPE_INSERTION) {
+            r_treap.insert(get<I_OPELEM>(insertions[next_insertion++]));
+        } else {  // OPTYPE_DELETION
+            r_treap.delet(get<I_OPKEY>(deletions[next_deletion++]));
+        }
+    }
+    csc::time_point end_rt = csc::now();  // Stop timer
+    print_time(start_rt, end_rt, "insertions, deletions on RandomisedTreap");
+
+    assert(("Insertions not all completed", next_insertion == num_insertions));
+    assert(("Deletions not all completed", next_deletion == num_deletions));
+    // assert(("Heap condition was not satisfied", r_treap.heap_condition_satisfied()));
+    assert(("BST condition was not satisfied", r_treap.bst_condition_satisfied()));
+
+    free(insertions);
+    free(deletions);
+}
+
+void experiment2() {
+    cout << "==Experiment 2==\n"
+         << "> Deletion Probability = 0.1%\n";
+    experiment2_phase(999000, 1000);
+    cout << "> END 0.1%\n\n";
+
+    cout << "> Deletion Probability = 0.5%\n";
+    experiment2_phase(995000, 5000);
+    cout << "> END 0.5%\n\n";
+
+    cout << "> Deletion Probability = 1%\n";
+    experiment2_phase(990000, 10000);
+    cout << "> END 1%\n\n";
+
+    cout << "> Deletion Probability = 5%\n";
+    experiment2_phase(950000, 50000);
+    cout << "> END 5%\n\n";
+
+    cout << "> Deletion Probability = 10%\n";
+    experiment2_phase(900000, 100000);
+    cout << "> END 10%\n\n";
 }
 
 /* ******************************************************************************************** *
@@ -677,8 +840,8 @@ void experiment2() {
 
 int main(int argc, char** argv) {
     // Start timer
-    csc::time_point tp0 = csc::now();
-    time_t time0 = chrono::system_clock::to_time_t(tp0);
+    csc::time_point start_da = csc::now();
+    time_t time0 = chrono::system_clock::to_time_t(start_da);
 
     sanity_test();
 
@@ -686,9 +849,9 @@ int main(int argc, char** argv) {
     cout << "Initialise DataGenerator\n";
     DataGenerator dg;
     cout << "Initialise DynamicArray\n";
-    DynamicArray da;
+    DynamicArray dyn_array;
     cout << "Initialise RandomisedTreap\n";
-    RandomisedTreap rt;
+    RandomisedTreap r_treap;
 
     cout << "Create 10 insertions\n";
     insertion_op insert1k[10] = {};
@@ -698,25 +861,25 @@ int main(int argc, char** argv) {
 
     // cout << "1000 insertions into DynamicArray\n";
     // for (int i = 0; i < 1000; i++) {
-    //     da.insert(get<I_OPELEM>(insert1k[i]));
+    //     dyn_array.insert(get<I_OPELEM>(insert1k[i]));
     // }
 
     cout << "10 insertions into RandomisedTreap\n";
     for (int i = 0; i < 10; i++) {
-        rt.insert(get<I_OPELEM>(insert1k[i]));
+        r_treap.insert(get<I_OPELEM>(insert1k[i]));
     }
 
     // cout << "print DynamicArray\n";
-    // da.print();
+    // dyn_array.print();
 
     cout << "print RandomisedTreap\n";
-    rt.print();
+    r_treap.print();
 
     cout << "5 searches in RandomisedTreap\n";
     for (int i = 0; i < 5; i++) {
         search_op s = dg.gen_search();
         cout << "searching key=" << get<I_OPKEY>(s);
-        element* e = rt.search(get<I_OPKEY>(s));
+        element* e = r_treap.search(get<I_OPKEY>(s));
         if (e == NULL) {
             cout << "=> not found\n";
         } else {
@@ -728,29 +891,30 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 5; i++) {
         deletion_op d = dg.gen_deletion();
         cout << "deleting key=" << get<I_OPKEY>(d) << '\n';
-        rt.delet(get<I_OPKEY>(d));
+        r_treap.delet(get<I_OPKEY>(d));
     }
 
     cout << "print RandomisedTreap\n";
-    rt.print();
+    r_treap.print();
 
-    cout << "Treap height = " << rt.get_height() << "\n";
-    int* depths = rt.get_all_node_depths(10);
+    cout << "Treap height = " << r_treap.get_height() << "\n";
+    int* depths = r_treap.get_all_node_depths(10);
     cout << "Avg node depth = [";
     for (int i = 0; i < 10; i++) {
         cout << depths[i] << ",";
     }
     cout << "]\n";
 
-    csc::time_point tp1 = csc::now();
-    time_t time1 = chrono::system_clock::to_time_t(tp1);
+    csc::time_point end_da = csc::now();
+    time_t time1 = chrono::system_clock::to_time_t(end_da);
 
-    chrono::duration<double> elapsed_seconds = tp1 - tp0;
+    chrono::duration<double> elapsed_seconds = end_da - start_da;
     cout << "Finished at " << ctime(&time1);
     cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 
-    experiment0();
-    experiment1();
+    // experiment0();
+    // experiment1();
+    experiment2();
 
     return 0;
 }
