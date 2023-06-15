@@ -1,5 +1,6 @@
 .vscode
 .vs
-treap.exe
+*.exe
+*.o
 temp*
 results
