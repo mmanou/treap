@@ -22,8 +22,6 @@
 #define KEY_MAX 10000000
 #define PRIORITY_MAX INT_MAX
 
-#define DELETED -1
-
 using namespace std;
 
 /* ******************************************************************************************** *

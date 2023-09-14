@@ -2,13 +2,7 @@
  * COMP90077 Advanced Algorithms and Data Structures: Assignment 2
  *  Title: An Experimental Study on Treaps
  *  Author: Michael Manoussakis
- *  Date: 18/05/2023
- *
- *  Compilation command:
- *    g++ -std=c++14 -O3 -o treap.exe treap.cc
- *  Running instructions:
- *    ./treap.exe
- *
+ *  Date: 03/07/2023
  * ******************************************************************************************** */
 
 #include <cassert>
@@ -47,7 +41,7 @@ void sanity_test() {
 
 int main(int argc, char** argv) {
     // Start timer
-    csc::time_point start = csc::now();
+    const csc::time_point start = csc::now();
 
     sanity_test();
 
@@ -112,10 +106,10 @@ int main(int argc, char** argv) {
     cout << "]\n";
     free(depths);
 
-    csc::time_point end = csc::now();
-    time_t time1 = chrono::system_clock::to_time_t(end);
+    const csc::time_point end = csc::now();
+    const time_t time1 = chrono::system_clock::to_time_t(end);
 
-    chrono::duration<double> elapsed_seconds = end - start;
+    const chrono::duration<double> elapsed_seconds = end - start;
     cout << "Finished at " << ctime(&time1);
     cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 

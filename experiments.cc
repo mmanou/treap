@@ -13,8 +13,8 @@ RandIntGenerator rng;
 /* @param start csc::time_point start = csc::now();
  * @param end csc::time_point end = csc::now(); */
 void print_time(csc::time_point start, csc::time_point end, string activity) {
-    time_t t = csc::to_time_t(end);
-    chrono::duration<double> elapsed_seconds = end - start;
+    const time_t t = csc::to_time_t(end);
+    const chrono::duration<double> elapsed_seconds = end - start;
     cout << "Finished " << activity << " at " << ctime(&t)
          << "Elapsed time: " << elapsed_seconds.count() << "s\n\n";
 }
@@ -33,7 +33,6 @@ void experiment0_phase(int* total_depths) {
     // Generate test data
     cout << "Create 1024 insertions\n";
     vector<insertion_op> insertions;
-    // insertion_op* insertions = (insertion_op*)malloc(E0_COUNT * sizeof(insertion_op));
     for (int i = 0; i < E0_COUNT; i++) {
         insertions.push_back(dg.gen_specific_insertion(i));
     }
@@ -265,7 +264,7 @@ void experiment3_phase(const int num_insertions, const int num_searches) {
     int next_insertion = 0;
     int next_search = 0;
     cout << NUM_OPERATIONS << " insertions, searches on DynamicArray\n";
-    csc::time_point start_da = csc::now();  // Start timer
+    const csc::time_point start_da = csc::now();  // Start timer
     for (int i = 0; i < NUM_OPERATIONS; i++) {
         if (updates[i] == OPTYPE_INSERTION) {
             dyn_array.insert(insertions[next_insertion++].ELEM);
@@ -273,7 +272,7 @@ void experiment3_phase(const int num_insertions, const int num_searches) {
             dyn_array.search(searches[next_search++].KEY);
         }
     }
-    csc::time_point end_da = csc::now();  // Stop timer
+    const csc::time_point end_da = csc::now();  // Stop timer
     print_time(start_da, end_da, "insertions, searches on DynamicArray");
 
     assert(("Insertions not all completed", next_insertion == num_insertions));
@@ -283,7 +282,7 @@ void experiment3_phase(const int num_insertions, const int num_searches) {
     next_insertion = 0;
     next_search = 0;
     cout << NUM_OPERATIONS << " insertions, searches on RandomisedTreap\n";
-    csc::time_point start_rt = csc::now();  // Start timer
+    const csc::time_point start_rt = csc::now();  // Start timer
     for (int i = 0; i < NUM_OPERATIONS; i++) {
         if (updates[i] == OPTYPE_INSERTION) {
             r_treap.insert(insertions[next_insertion++].ELEM);
@@ -291,7 +290,7 @@ void experiment3_phase(const int num_insertions, const int num_searches) {
             r_treap.search(searches[next_search++].KEY);
         }
     }
-    csc::time_point end_rt = csc::now();  // Stop timer
+    const csc::time_point end_rt = csc::now();  // Stop timer
     print_time(start_rt, end_rt, "insertions, searches on RandomisedTreap");
 
     assert(("Insertions not all completed", next_insertion == num_insertions));
@@ -362,7 +361,7 @@ void experiment4_phase(const int num_operations, const int num_insertions, const
     int next_deletion = 0;
     int next_search = 0;
     cout << num_operations << " insertions, deletions, searches on DynamicArray\n";
-    csc::time_point start_da = csc::now();  // Start timer
+    const csc::time_point start_da = csc::now();  // Start timer
     for (int i = 0; i < num_operations; i++) {
         if (updates[i] == OPTYPE_INSERTION) {
             dyn_array.insert(insertions[next_insertion++].ELEM);
@@ -372,7 +371,7 @@ void experiment4_phase(const int num_operations, const int num_insertions, const
             dyn_array.search(searches[next_search++].KEY);
         }
     }
-    csc::time_point end_da = csc::now();  // Stop timer
+    const csc::time_point end_da = csc::now();  // Stop timer
     print_time(start_da, end_da, "insertions, deletions, searches on DynamicArray");
 
     assert(("Insertions not all completed", next_insertion == num_insertions));
@@ -384,7 +383,7 @@ void experiment4_phase(const int num_operations, const int num_insertions, const
     next_deletion = 0;
     next_search = 0;
     cout << num_operations << " insertions, deletions, searches on RandomisedTreap\n";
-    csc::time_point start_rt = csc::now();  // Start timer
+    const csc::time_point start_rt = csc::now();  // Start timer
     for (int i = 0; i < num_operations; i++) {
         if (updates[i] == OPTYPE_INSERTION) {
             r_treap.insert(insertions[next_insertion++].ELEM);
@@ -394,7 +393,7 @@ void experiment4_phase(const int num_operations, const int num_insertions, const
             r_treap.search(searches[next_search++].KEY);
         }
     }
-    csc::time_point end_rt = csc::now();  // Stop timer
+    const csc::time_point end_rt = csc::now();  // Stop timer
     print_time(start_rt, end_rt, "insertions, deletions, searches on RandomisedTreap");
 
     assert(("Insertions not all completed", next_insertion == num_insertions));

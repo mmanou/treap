@@ -6,8 +6,8 @@
 #include <iterator>
 #include <vector>
 
-#include "rand_int_generator.h"
 #include "data_generator.h"
+#include "rand_int_generator.h"
 
 #define NOT_FOUND -1
 
@@ -67,7 +67,7 @@ class RandomisedTreap {
     }
 
     // Core helper function for search operation
-    treap_node* search_node(treap_node* head, int key) {
+    treap_node* search_node(treap_node* head, const int key) {
         if (head->get_key() == key) {
             return head;
         }
@@ -94,7 +94,7 @@ class RandomisedTreap {
         return temp;
     }
 
-    treap_node* search_parent(treap_node* parent, treap_node* node, int key) {
+    treap_node* search_parent(treap_node* parent, treap_node* node, const int key) {
         if (parent != NULL && node->get_key() == key) {
             node->priority = INT_MAX;  // mark for deletion
             return parent;
@@ -145,7 +145,7 @@ class RandomisedTreap {
     }
 
     // Core helper function for deletion operation
-    void delete_node(treap_node* parent, int key) {
+    void delete_node(treap_node* parent, const int key) {
         if (parent == NULL) {
             return;
         }
@@ -250,7 +250,7 @@ class RandomisedTreap {
         print(head->right, depth + 1);
     }
 
-    bool heap_condition_satisfied(int parent_prio, treap_node* node) {
+    bool heap_condition_satisfied(const int parent_prio, treap_node* node) {
         if (node == NULL) {
             return true;
         }
@@ -307,7 +307,7 @@ class RandomisedTreap {
     }
 
     // Perform deletion operation
-    void delet(int key) {
+    void delet(const int key) {
         if (head == NULL) {
             return;
         }
@@ -352,7 +352,7 @@ class RandomisedTreap {
     }
 
     // Perform search operation
-    element* search(int key) {
+    element* search(const int key) {
         treap_node* node = search_node(head, key);
         if (node == NULL) {
             return NULL;
@@ -368,7 +368,7 @@ class RandomisedTreap {
         return get_height_and_depths_e0(head, total_depths, 0);
     }
 
-    int* get_all_node_depths(int num_nodes) {
+    int* get_all_node_depths(const int num_nodes) {
         if (head == NULL) {
             return NULL;
         }
