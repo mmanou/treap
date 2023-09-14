@@ -146,4 +146,6 @@ class RandIntGenerator {
     }
 };
 
+extern RandIntGenerator rng; // Global Random Int Generator for (id, key, priority), and update sequences
+
 #endif
