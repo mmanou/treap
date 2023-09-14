@@ -2,8 +2,6 @@
 
 using namespace std;
 
-typedef chrono::system_clock csc;
-
 RandIntGenerator rng;
 
 /* ******************************************************************************************** *
@@ -11,7 +9,8 @@ RandIntGenerator rng;
  * ******************************************************************************************** */
 
 /* @param start csc::time_point start = csc::now();
- * @param end csc::time_point end = csc::now(); */
+ * @param end csc::time_point end = csc::now();
+ */
 void print_time(csc::time_point start, csc::time_point end, string activity) {
     const time_t t = csc::to_time_t(end);
     const chrono::duration<double> elapsed_seconds = end - start;

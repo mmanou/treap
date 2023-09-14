@@ -8,6 +8,9 @@
 
 #include "data_structures.h"
 
+typedef chrono::system_clock csc;
+
+void print_time(csc::time_point start, csc::time_point end, string activity);
 void experiment0();
 void experiment1();
 void experiment2();

@@ -13,6 +13,8 @@
 
 #include "experiments.h"
 
+#define ALL_EXPERIMENTS -1
+
 using namespace std;
 
 typedef chrono::system_clock csc;
@@ -21,7 +23,9 @@ typedef chrono::system_clock csc;
  *   TESTS
  * ******************************************************************************************** */
 
-void sanity_test() {
+void sanity_test_1() {
+    csc::time_point start = csc::now();  // Start timer
+
     DataGenerator dg;
 
     cout << "Initialise element\n";
@@ -33,24 +37,18 @@ void sanity_test() {
     deletion_op e2 = dg.gen_deletion();
     cout << "Initialise search\n";
     search_op e3 = dg.gen_search();
+
+    csc::time_point end = csc::now();  // Stop timer
+    print_time(start, end, "Sanity Test 1");
 }
 
-/* ******************************************************************************************** *
- * * MAIN
- * ******************************************************************************************** */
+void sanity_test_2() {
 
-int main(int argc, char** argv) {
-    // Start timer
-    const csc::time_point start = csc::now();
+    csc::time_point start = csc::now();  // Start timer
 
-    sanity_test();
-
-    // Initialise Data Structures
-    cout << "Initialise DataGenerator\n";
+    cout << "Initialise Data Structures\n";
     DataGenerator dg;
-    cout << "Initialise DynamicArray\n";
     DynamicArray dyn_array;
-    cout << "Initialise RandomisedTreap\n";
     RandomisedTreap r_treap;
 
     cout << "Create 10 insertions\n";
@@ -59,18 +57,18 @@ int main(int argc, char** argv) {
         insert1k[i] = dg.gen_insertion();
     }
 
-    // cout << "1000 insertions into DynamicArray\n";
-    // for (int i = 0; i < 1000; i++) {
-    //     dyn_array.insert(get<I_OPELEM>(insert1k[i]));
-    // }
+    cout << "10 insertions into DynamicArray\n";
+    for (int i = 0; i < 10; i++) {
+        dyn_array.insert(insert1k[i].ELEM);
+    }
 
     cout << "10 insertions into RandomisedTreap\n";
     for (int i = 0; i < 10; i++) {
         r_treap.insert(insert1k[i].ELEM);
     }
 
-    // cout << "print DynamicArray\n";
-    // dyn_array.print();
+    cout << "print DynamicArray\n";
+    dyn_array.print();
 
     cout << "print RandomisedTreap\n";
     r_treap.print();
@@ -106,18 +104,58 @@ int main(int argc, char** argv) {
     cout << "]\n";
     free(depths);
 
-    const csc::time_point end = csc::now();
-    const time_t time1 = chrono::system_clock::to_time_t(end);
+    csc::time_point end = csc::now();  // Stop timer
+    print_time(start, end, "Sanity Test");
+}
 
-    const chrono::duration<double> elapsed_seconds = end - start;
-    cout << "Finished at " << ctime(&time1);
-    cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
+/* ******************************************************************************************** *
+ * * MAIN
+ * ******************************************************************************************** */
 
-    experiment0();
-    experiment1();
-    experiment2();
-    experiment3();
-    experiment4();
+int main(int argc, char** argv) {
+    if (argc > 2) {
+        cout << "Too many arguments.";
+        return 1;
+    }
 
+    int experiment_num = ALL_EXPERIMENTS;
+
+    if (argc > 1) {
+        experiment_num = atoi(argv[1]);
+
+        if (experiment_num < 0 || experiment_num > 4) {
+            cout << "Invalid experiment number. Expected 0-4.";
+            return 1;
+        }
+    }
+
+    cout << "==Sanity Test==";
+    sanity_test_1();
+    sanity_test_2();
+
+    switch (experiment_num) {
+        case ALL_EXPERIMENTS:
+            experiment0();
+            experiment1();
+            experiment2();
+            experiment3();
+            experiment4();
+            break;
+        case 0:
+            experiment0();
+            break;
+        case 1:
+            experiment1();
+            break;
+        case 2:
+            experiment2();
+            break;
+        case 3:
+            experiment3();
+            break;
+        case 4:
+            experiment4();
+            break;
+    }
     return 0;
 }
