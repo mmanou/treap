@@ -94,6 +94,11 @@ void experiment1_phase(const int num_insertions) {
 
     // Generate insertions
     insertion_op* insertions = (insertion_op*)malloc(num_insertions * sizeof(insertion_op));
+    if (insertions == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_insertions; i++) {
         insertions[i] = dg.gen_insertion();
     }
@@ -158,13 +163,25 @@ void experiment2_phase(const int num_insertions, const int num_deletions) {
 
     // Generate update sequence
     insertion_op* insertions = (insertion_op*)malloc(num_insertions * sizeof(insertion_op));
+    if (insertions == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_insertions; i++) {
         insertions[i] = dg.gen_insertion();
     }
+
     deletion_op* deletions = (deletion_op*)malloc(num_deletions * sizeof(deletion_op));
+    if (deletions == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_deletions; i++) {
         deletions[i] = dg.gen_deletion();
     }
+
     vector<int> updates = rng.rand_update_sequence2(
         NUM_OPERATIONS, OPTYPE_INSERTION, num_insertions, OPTYPE_DELETION, num_deletions);
 
@@ -249,13 +266,25 @@ void experiment3_phase(const int num_insertions, const int num_searches) {
 
     // Generate update sequence
     insertion_op* insertions = (insertion_op*)malloc(num_insertions * sizeof(insertion_op));
+    if (insertions == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_insertions; i++) {
         insertions[i] = dg.gen_insertion();
     }
+
     search_op* searches = (search_op*)malloc(num_searches * sizeof(search_op));
+    if (searches == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_searches; i++) {
         searches[i] = dg.gen_search();
     }
+
     vector<int> updates = rng.rand_update_sequence2(NUM_OPERATIONS, OPTYPE_INSERTION,
                                                     num_insertions, OPTYPE_SEARCH, num_searches);
 
@@ -340,17 +369,35 @@ void experiment4_phase(const int num_operations, const int num_insertions, const
 
     // Generate update sequence
     insertion_op* insertions = (insertion_op*)malloc(num_insertions * sizeof(insertion_op));
+    if (insertions == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_insertions; i++) {
         insertions[i] = dg.gen_insertion();
     }
+
     deletion_op* deletions = (deletion_op*)malloc(num_deletions * sizeof(deletion_op));
+    if (deletions == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_deletions; i++) {
         deletions[i] = dg.gen_deletion();
     }
+
     search_op* searches = (search_op*)malloc(num_searches * sizeof(search_op));
+    if (searches == NULL) {  // Check allocation successful
+        cerr << "Failed to allocate, aborting...\n";
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_searches; i++) {
         searches[i] = dg.gen_search();
     }
+
     vector<int> updates =
         rng.rand_update_sequence3(num_operations, OPTYPE_INSERTION, num_insertions,
                                   OPTYPE_DELETION, num_deletions, OPTYPE_SEARCH, num_searches);

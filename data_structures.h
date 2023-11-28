@@ -418,6 +418,11 @@ class DynamicArray {
 
     void resize() {
         element* new_list = (element*)malloc(capacity * sizeof(element));
+        if (new_list == NULL) { // Check allocation successful
+            cerr << "Failed to allocate, aborting...\n";
+            exit(EXIT_FAILURE);
+        }
+
         for (int i = 0; i < count; i++) {
             new_list[i] = list[i];
         }
@@ -426,7 +431,13 @@ class DynamicArray {
     }
 
    public:
-    DynamicArray() { list = (element*)malloc(1 * sizeof(element)); }
+    DynamicArray() {
+        list = (element*)malloc(1 * sizeof(element));
+        if (list == NULL) { // Check allocation successful
+            cerr << "Failed to allocate, aborting...\n";
+            exit(EXIT_FAILURE);
+        }
+    }
     ~DynamicArray() { free(list); }
 
     void insert(element x) {

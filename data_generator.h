@@ -17,6 +17,11 @@ class DataGenerator {
    public:
     DataGenerator() {
         key_list = (int*)malloc(KEY_MAX * sizeof(int));  // NOTE: Might need more than KEY_MAX
+        if (key_list == NULL) { // Check allocation successful
+            cerr << "Failed to allocate, aborting...\n";
+            exit(EXIT_FAILURE);
+        }
+
         for (int i = 0; i < KEY_MAX; i++) {
             key_list[i] = DELETED;
         }
