@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    cout << "==Sanity Test==";
+    cout << "==Sanity Test==\n";
     sanity_test_1();
     sanity_test_2();
 
