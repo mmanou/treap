@@ -39,7 +39,7 @@ In Experiments 1-4, keys are from 0 to 10 million.
 
 ## Running instructions
 
-```
+``` bash
 make all
 ./treap.exe               // run all experiments
 ./treap.exe <exp_number>  // run specific experiment
